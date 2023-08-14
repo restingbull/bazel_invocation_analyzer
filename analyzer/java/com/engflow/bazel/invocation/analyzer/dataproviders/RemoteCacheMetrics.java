@@ -14,26 +14,32 @@ public class RemoteCacheMetrics implements Datum {
   private final Duration totalDownloadOutputs;
   private final Duration totalUploadOutputs;
 
+  private final Duration totalLocalExecutions;
   private final float percentCachedRemotely;
 
   RemoteCacheMetrics() {
-    this(Duration.ZERO, Duration.ZERO, Duration.ZERO, 0f);
+    this(Duration.ZERO, Duration.ZERO, Duration.ZERO, Duration.ZERO, 0f);
   }
 
   RemoteCacheMetrics(
       Duration totalCacheCheck,
       Duration totalDownloadOutputs,
       Duration totalUploadOutputs,
+      Duration totalLocalExecutions,
       float percentCachedRemotely) {
     this.totalCacheCheck = totalCacheCheck;
     this.totalDownloadOutputs = totalDownloadOutputs;
     this.totalUploadOutputs = totalUploadOutputs;
+    this.totalLocalExecutions = totalLocalExecutions;
     this.percentCachedRemotely = percentCachedRemotely;
   }
 
   @Override
   public boolean isEmpty() {
-    return totalCacheCheck.isZero() && totalDownloadOutputs.isZero() && totalUploadOutputs.isZero();
+    return totalCacheCheck.isZero()
+        && totalDownloadOutputs.isZero()
+        && totalUploadOutputs.isZero()
+        && totalLocalExecutions.isZero();
   }
 
   @Override
@@ -55,6 +61,8 @@ public class RemoteCacheMetrics implements Datum {
         + totalDownloadOutputs
         + ", totalUploadOutputs="
         + totalUploadOutputs
+        + ", totalLocalExecutions="
+        + totalLocalExecutions
         + ", percentCached="
         + percentCachedRemotely
         + '}';
@@ -72,13 +80,14 @@ public class RemoteCacheMetrics implements Datum {
     return Float.compare(that.percentCachedRemotely, percentCachedRemotely) == 0
         && Objects.equal(totalCacheCheck, that.totalCacheCheck)
         && Objects.equal(totalDownloadOutputs, that.totalDownloadOutputs)
+        && Objects.equal(totalLocalExecutions, that.totalLocalExecutions)
         && Objects.equal(totalUploadOutputs, that.totalUploadOutputs);
   }
 
   @Override
   public int hashCode() {
     return Objects.hashCode(
-        totalCacheCheck, totalDownloadOutputs, totalUploadOutputs, percentCachedRemotely);
+        totalCacheCheck, totalDownloadOutputs, totalUploadOutputs, totalLocalExecutions, percentCachedRemotely);
   }
 
   @Override
@@ -87,7 +96,8 @@ public class RemoteCacheMetrics implements Datum {
         "Total Remote Cache Check Duration: %s\n"
             + "Total Remote Download Outputs: %s\n"
             + "Total Remote Upload Outputs: %s\n"
+            + "Total Executed Locally: %s\n"
             + "Percent cached remotely: %s",
-        totalCacheCheck, totalDownloadOutputs, totalUploadOutputs, percentCachedRemotely);
+        totalCacheCheck, totalDownloadOutputs, totalUploadOutputs,totalLocalExecutions, percentCachedRemotely);
   }
 }

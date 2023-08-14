@@ -39,18 +39,19 @@ public class RemoteCacheMetricsDataProvider extends DataProvider {
         summary.check,
         summary.download,
         summary.upload,
+        summary.executed,
         ((float) summary.uncached / metrics.size()) * 100f);
   }
 
   RemoteCacheData coalesce(LocalAction action) {
     return action.relatedEvents.stream()
         .reduce(RemoteCacheData.EMPTY, RemoteCacheData::plus, RemoteCacheData::plus)
-        .calculateCacheState();
+        .calculateCacheState(action.action.duration);
   }
 
   private static class RemoteCacheData {
     private static final RemoteCacheData EMPTY =
-        new RemoteCacheData(Duration.ZERO, Duration.ZERO, Duration.ZERO, 0) {
+        new RemoteCacheData(Duration.ZERO, Duration.ZERO, Duration.ZERO, Duration.ZERO, 0) {
           @Override
           RemoteCacheData plus(RemoteCacheData that) {
             return that;
@@ -60,12 +61,16 @@ public class RemoteCacheMetricsDataProvider extends DataProvider {
     public final Duration check;
     public final Duration download;
     private final Duration upload;
+
+    private final Duration executed;
     private final int uncached;
 
-    RemoteCacheData(Duration check, Duration download, Duration upload, int uncached) {
+    RemoteCacheData(
+        Duration check, Duration download, Duration upload, Duration executed, int uncached) {
       this.check = check;
       this.download = download;
       this.upload = upload;
+      this.executed = executed;
       this.uncached = uncached;
     }
 
@@ -74,27 +79,32 @@ public class RemoteCacheMetricsDataProvider extends DataProvider {
           check.plus(other.check),
           download.plus(other.download),
           upload.plus(other.upload),
+          executed.plus(other.executed),
           uncached + other.uncached);
     }
 
-    RemoteCacheData calculateCacheState() {
-      // The action was checked against remote, and nothing was downloaded.
-      // This means it was not cached remotely.
-      if (!check.isZero() && download.isZero()) {
-        return new RemoteCacheData(check, download, upload, 1);
+    RemoteCacheData calculateCacheState(Duration totalActionDuration) {
+      // The action was checked against remote, and was downloaded.
+      // This means it was cached remotely.
+      if (!check.isZero() && !download.isZero()) {
+        return this;
       }
-      return this;
+      return new RemoteCacheData(
+          check, download, upload, executed.plus(totalActionDuration.minus(check)), uncached + 1);
     }
 
     RemoteCacheData plus(CompleteEvent event) {
       if (CAT_REMOTE_ACTION_CACHE_CHECK.equals(event.category)) {
-        return new RemoteCacheData(check.plus(event.duration), download, upload, uncached);
+        return new RemoteCacheData(
+            check.plus(event.duration), download, upload, executed, uncached);
       }
       if (CAT_REMOTE_OUTPUT_DOWNLOAD.equals(event.category)) {
-        return new RemoteCacheData(check, download.plus(event.duration), upload, uncached);
+        return new RemoteCacheData(
+            check, download.plus(event.duration), upload, executed, uncached);
       }
       if (CAT_REMOTE_EXECUTION_UPLOAD_TIME.equals(event.category)) {
-        return new RemoteCacheData(check, download, upload.plus(event.duration), uncached);
+        return new RemoteCacheData(
+            check, download, upload.plus(event.duration), executed, uncached);
       }
       return this;
     }

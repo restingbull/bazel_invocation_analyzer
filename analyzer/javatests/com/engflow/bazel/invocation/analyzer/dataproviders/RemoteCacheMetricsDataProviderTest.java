@@ -79,6 +79,6 @@ public class RemoteCacheMetricsDataProviderTest extends DataProviderUnitTestBase
                 Duration.ofSeconds(1 + 4 + 16),
                 Duration.ofSeconds(2 + 8),
                 Duration.ofSeconds(32),
-                25.0f));
+                Duration.ZERO, 25.0f));
   }
 }
